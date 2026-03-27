@@ -15,7 +15,7 @@ POST /v1/videos/generations
         ↓
   Playwright controls Chromium
         ↓
-  Dreamina UI generates video (Seedance 2.0 Fast, default settings)
+  Dreamina UI generates video
         ↓
 GET /v1/videos/{id}/download
 ```
@@ -26,7 +26,7 @@ No API keys from ByteDance needed. Just a Dreamina account.
 
 ## Quickstart
 
-**Requirements:** 
+**Requirements:**
 - Go 1.22+
 - A Dreamina account with an active plan or at least free trial at [dreamina.capcut.com](https://dreamina.capcut.com)
 
@@ -45,13 +45,11 @@ go run . serve --port 8080
 
 # 3. Generate a video
 curl -X POST http://localhost:8080/v1/videos/generations \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "a cat sitting on the cloud, cinematic"}'
+  -F "prompt=a cat sitting on the cloud, cinematic"
 
 # 3.6. Only if you need to verify the whole Playwright process
 go run . test "me and the boys at the pool party flirting girls"
 ```
-
 
 ---
 
@@ -61,13 +59,44 @@ go run . test "me and the boys at the pool party flirting girls"
 
 Submit a video generation job. Returns immediately with a job ID.
 
-Video is generated using Dreamina's `AI Video` mode default settings.
+Accepts `multipart/form-data`.
 
-**Request body:**
-```json
-{
-  "prompt": "a cat walking in rain, cinematic lighting"
-}
+**Fields:**
+
+| Field | Type | Default | Options |
+|---|---|---|---|
+| `prompt` | string | required | — |
+| `model` | string | `seedance-2.0-fast` | `seedance-2.0`, `seedance-2.0-fast` |
+| `mode` | string | `omni` | `omni`, `start-end` |
+| `aspect_ratio` | string | `16:9` | `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9` |
+| `duration` | int | `5` | `4` – `15` |
+| `references` | file(s) | — | omni mode only, max 9 files |
+| `start_frame` | file | — | start-end mode only |
+| `end_frame` | file | — | start-end mode only |
+
+**Example — omni mode with references:**
+```bash
+curl -X POST http://localhost:8080/v1/videos/generations \
+  -F "prompt=cinematic scene" \
+  -F "model=seedance-2.0" \
+  -F "mode=omni" \
+  -F "aspect_ratio=16:9" \
+  -F "duration=12" \
+  -F "references=@image1.jpg" \
+  -F "references=@image2.jpg" \
+  -F "references=@image3.jpg"
+```
+
+**Example — start-end mode:**
+```bash
+curl -X POST http://localhost:8080/v1/videos/generations \
+  -F "prompt=smooth transition between two scenes" \
+  -F "model=seedance-2.0-fast" \
+  -F "mode=start-end" \
+  -F "aspect_ratio=9:16" \
+  -F "duration=5" \
+  -F "start_frame=@start.jpg" \
+  -F "end_frame=@end.jpg"
 ```
 
 **Response:**
@@ -101,7 +130,15 @@ Poll job status.
 | `pending` | Queued, not started yet |
 | `processing` | Dreamina is generating |
 | `done` | Ready to download |
-| `failed` | Generation failed |
+| `failed` | Generation failed — check `error` field |
+
+When `failed`, the response includes an `error` field explaining why:
+```json
+{
+  "status": "failed",
+  "error": "face detected in reference images — Dreamina rejected the request"
+}
+```
 
 ---
 
@@ -137,6 +174,12 @@ go run . serve --port 8080 --show
 
 # Quick test — generate 1 video from terminal
 go run . test "a futuristic city at night"
+
+# Test omni mode: seedance-2.0, 9 refs, 16:9, 12s
+go run . test1
+
+# Test start-end mode: seedance-2.0-fast, 9:16, 5s
+go run . test2
 ```
 
 ---
@@ -150,8 +193,7 @@ go run . serve --port 8080 --key mysecretkey
 ```bash
 curl -X POST http://localhost:8080/v1/videos/generations \
   -H "Authorization: Bearer mysecretkey" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "..."}'
+  -F "prompt=..."
 ```
 
 ---
@@ -172,8 +214,9 @@ Seedance-2.0-APIze/
 ## Notes
 
 - Session is saved to `.dreamina-session/` — gitignored, never commit it
-- Default concurrency is 1 (one video at a time) to avoid rate limiting
-- Generation takes ~30–90 seconds depending on Dreamina server load
+- Default concurrency is 1 (one video at a time) to avoid rate limiting and any further conflict issues
+- Generation takes 3~5 minutes depending on Dreamina server load and queue position
+- If Dreamina detects faces in reference images, the job will fail with a clear error message
 - Tested on Windows
 
 ---

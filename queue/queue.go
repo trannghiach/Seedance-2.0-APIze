@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/yourname/dreamina-pw/browser"
-	"github.com/yourname/dreamina-pw/scraper"
+	"github.com/trannghiach/Seedance-2.0-APIze/browser"
+	"github.com/trannghiach/Seedance-2.0-APIze/scraper"
 )
 
 type Status string
@@ -24,7 +24,6 @@ type Job struct {
 	Opts      scraper.GenerateOptions
 	Status    Status
 	VideoPath string
-	VideoURL  string
 	Error     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -47,8 +46,8 @@ func New(manager *browser.Manager, concurrency int) *Queue {
 	}
 
 	// Spawn worker goroutines
-	// Each worker = 1 browser page = 1 video processed concurrently
-	// Recommended: concurrency = 1-2 to avoid rate limits
+	// Mỗi worker = 1 browser page = 1 video được xử lý đồng thời
+	// Khuyến nghị: concurrency = 1-2 để tránh bị rate limit
 	for i := 0; i < concurrency; i++ {
 		go q.worker(i)
 	}
@@ -56,7 +55,7 @@ func New(manager *browser.Manager, concurrency int) *Queue {
 	return q
 }
 
-// Submit adds a job to the queue and returns job ID immediately
+// Submit thêm job vào queue, trả về job ID ngay lập tức
 func (q *Queue) Submit(opts scraper.GenerateOptions) string {
 	id := uuid.New().String()
 
@@ -74,7 +73,7 @@ func (q *Queue) Submit(opts scraper.GenerateOptions) string {
 	return id
 }
 
-// Get returns the status of a job
+// Get trả về trạng thái của job
 func (q *Queue) Get(id string) (*Job, bool) {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
@@ -82,11 +81,11 @@ func (q *Queue) Get(id string) (*Job, bool) {
 	return job, ok
 }
 
-// worker loop processes jobs from channel
+// worker loop xử lý jobs từ channel
 func (q *Queue) worker(id int) {
 	fmt.Printf("  Worker %d started\n", id)
 
-	// Each worker has its own browser page
+	// Mỗi worker có 1 browser page riêng
 	page, err := q.manager.NewPage()
 	if err != nil {
 		fmt.Printf("  Worker %d: failed to create page: %v\n", id, err)
@@ -114,7 +113,6 @@ func (q *Queue) worker(id int) {
 		} else {
 			job.Status = StatusDone
 			job.VideoPath = result.VideoPath
-			job.VideoURL = result.VideoURL
 			fmt.Printf("  Worker %d: job %s DONE\n", id, jobID[:8])
 		}
 		job.UpdatedAt = time.Now()

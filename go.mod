@@ -1,4 +1,4 @@
-module github.com/yourname/dreamina-pw
+module github.com/trannghiach/Seedance-2.0-APIze
 
 go 1.22
 

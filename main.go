@@ -5,24 +5,28 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourname/dreamina-pw/browser"
-	"github.com/yourname/dreamina-pw/queue"
-	"github.com/yourname/dreamina-pw/scraper"
-	"github.com/yourname/dreamina-pw/server"
+	"github.com/trannghiach/Seedance-2.0-APIze/browser"
+	"github.com/trannghiach/Seedance-2.0-APIze/queue"
+	"github.com/trannghiach/Seedance-2.0-APIze/scraper"
+	"github.com/trannghiach/Seedance-2.0-APIze/server"
 )
 
 const usage = `
 Dreamina Playwright API Wrapper
 
 Commands:
-	login    Open browser to log in to Dreamina (save session)
+  login    Open browser to log in to Dreamina (save session)
   serve    Start API server
-  test     Generate 1 video test
+  test     Generate 1 video test (default settings)
+  test1    Test omni mode: seedance-2.0, 9 refs, 16:9, 12s
+  test2    Test start-end mode: seedance-2.0-fast, 9:16, 5s
 
 Usage:
   go run . login
-  go run . serve [--port 8080] [--key myapikey] [--headless]
+  go run . serve [--port 8080] [--key myapikey] [--show]
   go run . test "a cat walking in rain"
+  go run . test1
+  go run . test2
 `
 
 func main() {
@@ -121,7 +125,6 @@ func main() {
 		result, err := s.Generate(scraper.GenerateOptions{
 			Prompt:      prompt,
 			Duration:    4,
-			Resolution:  "720p",
 			AspectRatio: "16:9",
 		})
 		if err != nil {
@@ -129,7 +132,68 @@ func main() {
 		}
 
 		fmt.Printf("\n✓ Video saved: %s\n", result.VideoPath)
-		fmt.Printf("  URL: %s\n", result.VideoURL)
+
+	// ── SUPER TESTS ──────────────────────────────────────────────────────────
+	case "test1":
+		fmt.Println("Test 1: seedance-2.0, omni, 9 refs, 16:9, 12s")
+		mgr, err := browser.New(false)
+		if err != nil {
+			fatal("browser:", err)
+		}
+		defer mgr.Close()
+		page, err := mgr.NewPage()
+		if err != nil {
+			fatal("page:", err)
+		}
+		s := scraper.New(page)
+		result, err := s.Generate(scraper.GenerateOptions{
+			Prompt:      "cinematic scene with these reference images",
+			Model:       "seedance-2.0",
+			Mode:        "omni",
+			AspectRatio: "16:9",
+			Duration:    12,
+			References: []string{
+				"testdata/ref1.jpg",
+				"testdata/ref2.jpg",
+				"testdata/ref3.jpg",
+				"testdata/ref4.jpg",
+				"testdata/ref5.jpg",
+				"testdata/ref6.jpg",
+				"testdata/ref7.jpg",
+				"testdata/ref8.jpg",
+				"testdata/ref9.jpg",
+			},
+		})
+		if err != nil {
+			fatal("test1:", err)
+		}
+		fmt.Printf("✓ Test 1 passed: %s\n", result.VideoPath)
+
+	case "test2":
+		fmt.Println("Test 2: seedance-2.0-fast, start-end, 9:16, 5s")
+		mgr, err := browser.New(false)
+		if err != nil {
+			fatal("browser:", err)
+		}
+		defer mgr.Close()
+		page, err := mgr.NewPage()
+		if err != nil {
+			fatal("page:", err)
+		}
+		s := scraper.New(page)
+		result, err := s.Generate(scraper.GenerateOptions{
+			Prompt:      "smooth transition between two scenes",
+			Model:       "seedance-2.0-fast",
+			Mode:        "start-end",
+			AspectRatio: "9:16",
+			Duration:    5,
+			StartFrame:  "testdata/start.jpg",
+			EndFrame:    "testdata/end.jpg",
+		})
+		if err != nil {
+			fatal("test2:", err)
+		}
+		fmt.Printf("✓ Test 2 passed: %s\n", result.VideoPath)
 
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
@@ -137,6 +201,8 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+
 
 func fatal(msg string, err error) {
 	fmt.Fprintf(os.Stderr, "✗ %s %v\n", msg, err)

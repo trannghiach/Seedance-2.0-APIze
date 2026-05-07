@@ -1,4 +1,4 @@
-# Seedance-2.0-APIze: Local Seedance 2.0 API written in GO
+# Seedance 2.0 API written in GO to run locally - Seedance-2.0-APIze: 
 
 > Unofficial REST API wrapper for [Dreamina](https://dreamina.capcut.com) / Seedance 2.0 — no official API needed.
 
